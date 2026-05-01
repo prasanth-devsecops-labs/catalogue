@@ -107,8 +107,59 @@ pipeline {
                 script{
                     withAWS(credentials: 'aws-creds', region: "${region}") {
                         sh """
-                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${acc_id}.dkr.ecr.${region}.amazonaws.com
                             docker build -t ${acc_id}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion} .
+                        """
+                    }
+                }
+            }
+        }
+        stage('Trivy OS Scan') {
+            steps {
+                script {
+                    // Generate table report
+                    sh """
+                        trivy image \
+                            --scanners vuln \
+                            --pkg-types os \
+                            --severity HIGH,MEDIUM \
+                            --format table \
+                            --output trivy-os-report.txt \
+                            --exit-code 0 \
+                            ${acc_id}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
+                    """
+
+                    // Print table to console
+                    sh 'cat trivy-os-report.txt'
+
+                    // Fail pipeline if vulnerabilities found
+                    def scanResult = sh(
+                        script: """
+                            trivy image \
+                                --scanners vuln \
+                                --pkg-types os \
+                                --severity HIGH,MEDIUM \
+                                --format table \
+                                --exit-code 1 \
+                                --quiet \
+                                ${acc_id}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
+                        """,
+                        returnStatus: true
+                    )
+
+                    if (scanResult != 0) {
+                        error "🚨 Trivy found HIGH/MEDIUM OS vulnerabilities. Pipeline failed."
+                    } else {
+                        echo "✅ No HIGH or MEDIUM OS vulnerabilities found. Pipeline continues."
+                    }
+                }
+            }
+        }
+        stage('Push to ECR') {
+            steps {
+                script{
+                    withAWS(credentials: 'aws-creds', region: "${region}") {
+                        sh """
+                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${acc_id}.dkr.ecr.${region}.amazonaws.com
                             docker push ${acc_id}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                         """
                     }
