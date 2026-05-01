@@ -1,7 +1,7 @@
 @Library('jenkins-test-library') _
 
 def configMap = [
-    project: "roboshop"
+    project: "roboshop",
     component: "catalogue"
 ]
 
