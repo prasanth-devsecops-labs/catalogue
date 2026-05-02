@@ -1,16 +1,9 @@
 // @Library('jenkins-test-library') _
 
-<<<<<<< HEAD
 // def configMap = [
 //     project: "roboshop",
 //     component: "catalogue"
 // ]
-=======
-def configMap = [
-    project: "roboshop",
-    component: "catalogue"
-]
->>>>>>> 445557dbe2c2f7ded0abd05067febfab98b51a96
 
 // echo "Triggering the library pipeline"
 
